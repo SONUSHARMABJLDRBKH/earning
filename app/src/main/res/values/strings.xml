@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Royal Bullet 350</string>
+    <string name="cd_brand_logo">Royal Bullet 350 brand emblem</string>
+    <string name="cd_hero_banner">Royal Bullet 350 showroom motorcycle banner</string>
+    <string name="cd_support_button">Customer Support</string>
+    <string name="cd_copy_id">Copy User ID</string>
+    <string name="cd_copy_referral">Copy Referral Code</string>
+    <string name="cd_back">Navigate back</string>
+</resources>

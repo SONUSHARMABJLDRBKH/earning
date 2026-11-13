@@ -1,0 +1,6 @@
+{
+  "name": "Royal Bullet 350",
+  "description": "Royal Bullet 350 motorcycle products, VIP memberships, wallet, referrals, and admin dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

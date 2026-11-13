@@ -1,0 +1,94 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
+    }
+
+    // Users: client cannot modify wallet balances, role, or vipTier directly
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId)
+        && request.resource.data.role == 'USER'
+        && request.resource.data.availableBalance == 0
+        && request.resource.data.promotionalBalance == 0
+        && request.resource.data.depositBalance == 0;
+      allow update: if isAdmin() || (
+        isOwner(userId)
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.availableBalance == resource.data.availableBalance
+        && request.resource.data.promotionalBalance == resource.data.promotionalBalance
+        && request.resource.data.depositBalance == resource.data.depositBalance
+        && request.resource.data.vipTier == resource.data.vipTier
+      );
+      allow delete: if false;
+    }
+
+    // Products & Membership Plans: public read, Admin write only
+    match /products/{productId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /membership_plans/{planId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Orders, Recharges, Withdrawals, Referrals, Ledger: server/admin controlled updates
+    match /orders/{orderId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if false; // Written exclusively via Cloud Functions
+    }
+
+    match /recharges/{rechargeId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'Pending'
+        && request.resource.data.amount >= 700
+        && request.resource.data.amount <= 100000;
+      allow update, delete: if false; // Verified strictly by Cloud Functions / Admin
+    }
+
+    match /withdrawals/{withdrawalId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if false; // Validated & debited atomically via Cloud Functions
+    }
+
+    match /referrals/{referralId} {
+      allow read: if isSignedIn() && (resource.data.referrerUserId == request.auth.uid || isAdmin());
+      allow write: if false; // Evaluated strictly server-side after order fulfillment
+    }
+
+    match /ledger/{entryId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if false; // Immutable server-side financial ledger
+    }
+
+    match /news/{newsId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /support/{ticketId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin();
+    }
+
+    match /app_config/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}
